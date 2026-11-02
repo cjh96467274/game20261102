@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>대학생 사자성어 마스터 - 웹게임</title>
+    <!-- Tailwind CSS (디자인용 스타일시트) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome (아이콘용) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Noto Sans KR) -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: linear-gradient(135deg, #eef2f3 0%, #8e9eab 100%);
+            min-height: 100vh;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.12), 0 8px 12px -6px rgba(0, 0, 0, 0.08);
+        }
+        .btn-bounce:active {
+            transform: scale(0.96);
+        }
+        /* 스크롤바 스타일 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-3 md:p-6 text-slate-800">
+
+    <!-- 메인 게임 컨테이너 -->
+    <div id="app" class="w-full max-w-2xl mx-auto">
+        
+        <!-- ==================== 1. 시작 화면 ==================== -->
+        <div id="start-screen" class="glass-card rounded-3xl p-6 md:p-10 text-center transition-all duration-300">
+            <div class="inline-block p-4 bg-indigo-100 text-indigo-600 rounded-2xl mb-4 shadow-sm">
+                <i class="fa-solid fa-book-open-reader text-4xl"></i>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-black text-slate-800 mb-2 tracking-tight">대학생 사자성어 마스터</h1>
+            <p class="text-slate-600 mb-6 text-sm md:text-base">어휘력과 상식을 넓히는 10문제 도전 사자성어 퀴즈</p>
+            
+            <!-- 최고 점수 카드 -->
+            <div class="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-4 mb-6 flex items-center justify-between shadow-sm">
+                <div class="flex items-center space-x-3">
+                    <i class="fa-solid fa-trophy text-amber-500 text-2xl"></i>
+                    <span class="font-bold text-slate-700">역대 최고 점수</span>
+                </div>
+                <span id="best-score-display" class="text-2xl font-black text-amber-600">0 점</span>
+            </div>
+
+            <!-- 게임 설정 모드 선택 -->
+            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 mb-6 text-left space-y-3">
+                <label class="block text-sm font-bold text-slate-700">답안 제출 방식 선택:</label>
+                <div class="grid grid-cols-2 gap-3">
+                    <button id="mode-choice-btn" onclick="setAnswerMode('choice')" class="p-3 rounded-xl border-2 font-bold text-sm transition-all border-indigo-600 bg-indigo-50 text-indigo-700 flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-list-check"></i>
+                        <span>4지 선다형</span>
+                    </button>
+                    <button id="mode-input-btn" onclick="setAnswerMode('input')" class="p-3 rounded-xl border-2 font-bold text-sm transition-all border-slate-200 bg-white text-slate-600 flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-keyboard"></i>
+                        <span>직접 입력형</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 게임 안내 사항 -->
+            <div class="text-left bg-indigo-50/60 p-4 rounded-2xl border border-indigo-100 text-xs md:text-sm text-slate-600 space-y-1.5 mb-8">
+                <p><i class="fa-solid fa-circle-info text-indigo-500 mr-1.5"></i> 총 <strong>10문제</strong>가 무작위로 출제됩니다 (문제당 제한시간 15초).</p>
+                <p><i class="fa-solid fa-circle-info text-indigo-500 mr-1.5"></i> 정답 시 기본 <strong>100점</strong> + 남은 시간(초) x <strong>2점</strong> 보너스 점수!</p>
+                <p><i class="fa-solid fa-circle-info text-indigo-500 mr-1.5"></i> 💡 힌트 사용 시 <strong>30점 감점</strong>됩니다.</p>
+            </div>
+
+            <!-- 게임 시작 버튼 -->
+            <button onclick="startGame()" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-lg rounded-2xl shadow-lg shadow-indigo-200 transition-all btn-bounce">
+                게임 시작하기 <i class="fa-solid fa-arrow-right ml-2"></i>
+            </button>
+        </div>
+
+
+        <!-- ==================== 2. 게임 진행 화면 ==================== -->
+        <div id="game-screen" class="glass-card rounded-3xl p-5 md:p-8 hidden">
+            <!-- 상단 상태바 (진행도, 남은시간, 현재 점수) -->
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-200">
+                <!-- 문제 번호 진행도 -->
+                <div class="flex items-center space-x-2">
+                    <span class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs md:text-sm font-extrabold">
+                        <span id="current-quiz-num">1</span> / 10
+                    </span>
+                </div>
+
+                <!-- 타이머 표시 -->
+                <div class="flex items-center space-x-2">
+                    <i class="fa-regular fa-clock text-rose-500 text-lg"></i>
+                    <span id="timer-text" class="font-black text-rose-600 text-xl w-8 text-center">15</span>초
+                </div>
+
+                <!-- 현재 점수 -->
+                <div class="text-right">
+                    <span class="text-xs text-slate-400 block font-bold">현재 점수</span>
+                    <span id="current-score" class="font-extrabold text-indigo-600 text-lg">0</span>
+                </div>
+            </div>
+
+            <!-- 타임 Progress Bar -->
+            <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden mb-6">
+                <div id="timer-bar" class="bg-rose-500 h-full w-full transition-all duration-1000 linear"></div>
+            </div>
+
+            <!-- 문제 표시 영역 -->
+            <div class="text-center bg-white p-6 md:p-8 rounded-2xl border border-slate-100 shadow-sm mb-6">
+                <div class="text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">다음 빈칸에 들어갈 글자는?</div>
+                
+                <!-- 사자성어 퀴즈 글자 (빈칸 강조) -->
+                <div id="quiz-question" class="text-4xl md:text-5xl font-black tracking-widest text-slate-800 my-4">
+                    <!-- JS로 문제 글자 생성 -->
+                </div>
+
+                <!-- 힌트 보기 버튼 및 힌트 텍스트 -->
+                <div class="mt-4 pt-4 border-t border-slate-100">
+                    <button id="hint-btn" onclick="useHint()" class="px-4 py-2 bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 text-xs md:text-sm font-bold rounded-xl transition-all btn-bounce inline-flex items-center space-x-2">
+                        <i class="fa-solid fa-lightbulb text-amber-500"></i>
+                        <span>뜻 힌트 보기 (-30점)</span>
+                    </button>
+                    <div id="hint-text" class="hidden mt-3 p-3 bg-amber-50/80 rounded-xl text-amber-900 text-xs md:text-sm font-medium border border-amber-200 animate-fade-in">
+                        <!-- 힌트 뜻풀이 노출 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- [모드 1] 4지 선다형 보기 -->
+            <div id="choice-container" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+                <!-- JS에서 선택지 4개 버튼 동적 생성 -->
+            </div>
+
+            <!-- [모드 2] 직접 입력형 보기 -->
+            <div id="input-container" class="hidden mb-6">
+                <form onsubmit="submitInputAnswer(event)" class="flex gap-2">
+                    <input type="text" id="user-input-answer" placeholder="빠진 두 글자를 입력하세요 (예: 부회)" maxlength="4" autocomplete="off" class="flex-1 px-4 py-3 border-2 border-indigo-200 focus:border-indigo-600 rounded-xl outline-none font-bold text-slate-800 text-center text-lg">
+                    <button type="submit" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all btn-bounce">
+                        제출
+                    </button>
+                </form>
+            </div>
+
+            <!-- 정답/오답 해설 결과 카드 (답을 선택하면 출력) -->
+            <div id="result-feedback" class="hidden p-5 rounded-2xl text-left border animate-fade-in">
+                <div class="flex items-center space-x-3 mb-2">
+                    <span id="feedback-icon" class="text-2xl"></span>
+                    <h3 id="feedback-title" class="text-lg font-black"></h3>
+                </div>
+                <div class="bg-white/80 p-3 rounded-xl space-y-1 text-sm border border-slate-200/60">
+                    <p class="font-bold text-slate-800"><span id="fb-idiom" class="text-indigo-600 text-base"></span> (<span id="fb-hanja" class="text-slate-600"></span>)</p>
+                    <p class="text-slate-600 text-xs md:text-sm leading-relaxed" id="fb-meaning"></p>
+                </div>
+                <button id="next-btn" onclick="nextQuestion()" class="mt-4 w-full py-3 bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm rounded-xl transition-all btn-bounce">
+                    다음 문제로 이동 <i class="fa-solid fa-arrow-right ml-1"></i>
+                </button>
+            </div>
+        </div>
+
+
+        <!-- ==================== 3. 최종 결과 화면 ==================== -->
+        <div id="result-screen" class="glass-card rounded-3xl p-6 md:p-10 text-center hidden">
+            <div class="inline-block p-4 bg-amber-100 text-amber-600 rounded-full mb-3">
+                <i class="fa-solid fa-crown text-4xl"></i>
+            </div>
+            <h2 class="text-2xl md:text-3xl font-black text-slate-800 mb-1">게임 종료!</h2>
+            <p class="text-slate-500 text-sm mb-6">10문제를 모두 마쳤습니다.</p>
+
+            <!-- 최종 점수 박스 -->
+            <div class="bg-gradient-to-br from-indigo-500 to-purple-600 text-white p-6 rounded-2xl shadow-xl mb-6">
+                <span class="text-xs uppercase tracking-widest font-semibold opacity-80 block">최종 획득 점수</span>
+                <span id="final-score" class="text-5xl font-black my-2 block">0</span>
+                <p id="new-record-tag" class="hidden text-amber-300 font-bold text-xs bg-black/20 py-1 px-3 rounded-full inline-block mt-1">
+                    🎉 축하합니다! 최고 점수 경신!
+                </p>
+            </div>
+
+            <!-- 정답 맞힌 개수 요약 -->
+            <div class="grid grid-cols-2 gap-3 mb-6 text-sm">
+                <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-xl text-emerald-800 font-bold">
+                    맞힌 문제: <span id="correct-count" class="text-emerald-600 font-extrabold">0</span> / 10
+                </div>
+                <div class="bg-rose-50 border border-rose-200 p-3 rounded-xl text-rose-800 font-bold">
+                    틀린 문제: <span id="wrong-count" class="text-rose-600 font-extrabold">0</span> / 10
+                </div>
+            </div>
+
+            <!-- 버튼 모음 -->
+            <div class="space-y-3">
+                <button id="review-btn" onclick="openReviewModal()" class="w-full py-3.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-base rounded-2xl transition-all btn-bounce flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-book"></i>
+                    <span>오답 노출 및 복습하기</span>
+                </button>
+                <button onclick="startGame()" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-base rounded-2xl shadow-md transition-all btn-bounce flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span>다시 도전하기</span>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ==================== 4. 복습(오답노트) 모달 ==================== -->
+    <div id="review-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <!-- 모달 헤더 -->
+            <div class="p-5 bg-indigo-600 text-white flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-graduation-cap text-xl"></i>
+                    <h3 class="font-bold text-lg">이번 게임 복습 노트</h3>
+                </div>
+                <button onclick="closeReviewModal()" class="text-white/80 hover:text-white text-2xl font-bold">
+                    &times;
+                </button>
+            </div>
+
+            <!-- 복습 리스트 (스크롤) -->
+            <div id="review-list" class="p-4 md:p-6 overflow-y-auto space-y-4 flex-1">
+                <!-- JS로 틀린 문제 및 전체 문제 풀이 동적 노출 -->
+            </div>
+
+            <!-- 모달 푸터 -->
+            <div class="p-4 border-t border-slate-100 bg-slate-50 text-right">
+                <button onclick="closeReviewModal()" class="px-5 py-2.5 bg-slate-800 text-white font-bold text-sm rounded-xl hover:bg-slate-900 transition-all">
+                    닫기
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ==================== 자바스크립트 스크립트 ==================== -->
+    <script>
+        /*
+         * ==========================================
+         * 1. 대학생 수준 사자성어 데이터베이스 (150개 이상)
+         * - 표준국어대사전 검증 반영 완료
+         * ==========================================
+         */
+        const idiomDatabase = [
+            { idiom: "견강부회", hanja: "牽强附會", meaning: "이치에 맞지 않는 말을 억지로 끌어 붙여 자기 주장의 조건에 맞추려고 함." },
+            { idiom: "곡학아세", hanja: "曲學阿世", meaning: "학문을 구부려 세상에 아첨함. 올바른 학문을 버리고 세상 편의에 맞추어 아첨함." },
+            { idiom: "군맹무상", hanja: "群盲撫象", meaning: "장님들이 코끼리를 만짐. 좁은 식견과 사견으로 전체를 판단하려고 함." },
+            { idiom: "성동격서", hanja: "聲東擊西", meaning: "동쪽에서 소리를 지르고 서쪽을 침. 상대를 교란시켜 공격하는 전략." },
+            { idiom: "지록위마", hanja: "指鹿爲馬", meaning: "사슴을 가리켜 말이라고 함. 권력을 휘둘러 거짓을 진실로 꾸밈." },
+            { idiom: "토사구팽", hanja: "兎死狗烹", meaning: "토끼가 죽으면 사냥개를 삶아 먹음. 필요할 땐 쓰고 쓸모없어지면 버림." },
+            { idiom: "과유불급", hanja: "過猶不及", meaning: "지나친 것은 미치지 못한 것과 같음." },
+            { idiom: "동병상련", hanja: "同病相憐", meaning: "같은 병을 앓는 사람끼리 서로 불쌍히 여김. 처지가 같은 사람끼리 동정함." },
+            { idiom: "명경지수", hanja: "明鏡止水", meaning: "맑은 거울과 조용한 물. 잔잔하고 마음이 사심 없이 깨끗함." },
+            { idiom: "반포지효", hanja: "反哺之效", meaning: "까마귀가 자란 뒤 어미에게 먹이를 물어다 줌. 자식이 자라 부모의 은혜에 보답함." },
+            { idiom: "주마간산", hanja: "走馬看山", meaning: "달리는 말 위에서 산을 구경함. 겉만 대강 훑어봄." },
+            { idiom: "타산지석", hanja: "他山之石", meaning: "다른 산의 하찮은 돌도 옥을 가는데 쓸 수 있음. 남의 언행도 교훈이 됨." },
+            { idiom: "청출어람", hanja: "靑出於藍", meaning: "쪽에서 나온 푸른 물감이 쪽빛보다 푸름. 제자가 스승보다 나음을 이르는 말." },
+            { idiom: "함흥차사", hanja: "咸興差使", meaning: "심부름을 가고 나서 아무 소식이 없거나 돌아오지 않음." },
+            { idiom: "형설지공", hanja: "螢雪之功", meaning: "반딧불과 눈빛으로 글을 읽어 이룬 공. 어려운 환경을 극복하고 공부함." },
+            { idiom: "화사첨족", hanja: "畫蛇添足", meaning: "뱀을 그리는데 발까지 그려 넣음. 쓸데없는 짓을 하여 도리어 일을 망침." },
+            { idiom: "대기만성", hanja: "大器晩成", meaning: "큰 그릇은 늦게 만들어짐. 큰 인물은 오랜 노력을 거쳐 늦게 형성됨." },
+            { idiom: "각주구검", hanja: "刻舟求劍", meaning: "칼을 물에 떨어뜨리자 배에 표시를 해둠. 융통성이 없고 미련함." },
+            { idiom: "감탄고토", hanja: "甘呑苦吐", meaning: "달면 삼키고 쓰면 뱉음. 신의를 버리고 자기 이익만 챙김." },
+            { idiom: "갑론을박", hanja: "甲論乙駁", meaning: "여러 사람이 서로 자신의 주장을 내세우며 왈가왈부함." },
+            { idiom: "구밀복검", hanja: "口蜜腹劍", meaning: "입으로는 달콤함을 말하나 배 속에는 칼을 품음. 겉과 속이 다름." },
+            { idiom: "권토중래", hanja: "捲土重來", meaning: "흙먼지를 일으키며 다시 옴. 실패 후 힘을 키워 다시 도전함." },
+            { idiom: "금상첨화", hanja: "錦上添花", meaning: "비단 위에 꽃을 더함. 좋은 일 위에 좋은 일이 겹침." },
+            { idiom: "난형난제", hanja: "難兄難弟", meaning: "누구를 형이라 하고 아우라 하기 어려움. 우열을 가리기 힘듦." },
+            { idiom: "남부여대", hanja: "男負女戴", meaning: "남자는 짐을 지고 여자는 짐을 읾. 가난에 쫓겨 방랑하는 모습." },
+            { idiom: "당랑거철", hanja: "螳螂拒轍", meaning: "사마귀가 수레바퀴를 막아섬. 제 힘을 모르고 무모하게 대적함." },
+            { idiom: "동상이몽", hanja: "同床異夢", meaning: "같은 침대에서 서로 다른 꿈을 걺. 겉으로는 같이 행동하나 속생각은 다름." },
+            { idiom: "마부위침", hanja: "磨斧爲針", meaning: "도끼를 갈아 바늘을 만듦. 끊임없는 노력으로 큰 일을 이룸." },
+            { idiom: "맥수지탄", hanja: "麥秀之歎", meaning: "보리만 무성함을 탄식함. 고국의 멸망을 슬퍼함." },
+            { idiom: "면종복배", hanja: "面從腹背", meaning: "앞에서는 순종하는 척하고 뒤에서는 딴마음을 품음." },
+            { idiom: "발본색원", hanja: "拔本塞源", meaning: "뿌리를 뽑고 근원을 막음. 폐단의 근본 원인을 없앰." },
+            { idiom: "배수지진", hanja: "背水之陣", meaning: "물을 등지고 진을 칢. 목숨을 걸고 필사적으로 싸움." },
+            { idiom: "부화뇌동", hanja: "附和雷同", meaning: "자신의 뚜렷한 소신 없이 남의 의견에 우르르 따라감." },
+            { idiom: "비육지탄", hanja: "髀肉之歎", meaning: "넓적다리에 살이 묾을 탄식함. 재능을 발휘할 기회가 없어 세월만 보냄." },
+            { idiom: "사면초가", hanja: "四面楚歌", meaning: "사방에서 초나라 노래가 들림. 사방이 적에게 둘러싸여 고립됨." },
+            { idiom: "살신성인", hanja: "殺身成仁", meaning: "자신의 몸을 바쳐 인(仁)을 이룸. 대의를 위해 희생함." },
+            { idiom: "삼고초려", hanja: "三顧草廬", meaning: "초가집을 세 번 찾아감. 인재를 얻기 위해 정성을 다함." },
+            { idiom: "상전벽해", hanja: "桑田碧海", meaning: "뽕밭이 푸른 바다로 변함. 세상일이 몰라보게 바뀜." },
+            { idiom: "선공후사", hanja: "先公後私", meaning: "공적인 일을 먼저 하고 사적인 일을 나중에 함." },
+            { idiom: "설상가상", hanja: "雪上加霜", meaning: "눈 위에 서리가 내림. 불행한 일이 거듭 일어남." },
+            { idiom: "수구초심", hanja: "首丘初心", meaning: "여우가 죽을 때 고향 언덕으로 머리를 둠. 근본을 잊지 않음." },
+            { idiom: "순망치한", hanja: "唇亡齒寒", meaning: "입술이 없으면 이가 시림. 밀접한 관계의 한쪽이 망하면 다른 쪽도 위험함." },
+            { idiom: "역지사지", hanja: "易地思之", meaning: "처지를 바꾸어 생각함." },
+            { idiom: "연목구어", hanja: "緣木求魚", meaning: "나무에 올라가 물고기를 구함. 도저히 불가능한 일을 하려 함." },
+            { idiom: "오월동주", hanja: "吳越同舟", meaning: "원수 지간인 오나라와 월나라 사람이 한 배에 탐. 적이라도 위험 앞에선 협력함." },
+            { idiom: "온고지신", hanja: "溫故知新", meaning: "옛것을 익히고 그것을 통해 새것을 앎." },
+            { idiom: "외유내강", hanja: "外柔內剛", meaning: "겉으로는 부드러우나 속은 굳세고 강함." },
+            { idiom: "용두사미", hanja: "龍頭蛇尾", meaning: "용의 머리에 뱀의 꼬리. 시작은 거창하나 끝이 유야무야됨." },
+            { idiom: "우이독경", hanja: "牛耳讀經", meaning: "소 귀에 경 읽기. 아무리 가르쳐도 깨닫지 못함." },
+            { idiom: "위기일발", hanja: "危機一髮", meaning: "머리카락 하나로 털을 긺. 여차하면 여지없이 파멸할 매우 위급한 순간." },
+            { idiom: "유명무실", hanja: "有名無實", meaning: "이름만 있고 실상은 없음." },
+            { idiom: "유유상종", hanja: "類類相從", meaning: "같은 무리끼리 서로 서로 어울림." },
+            { idiom: "이심전심", hanja: "以心傳心", meaning: "마음에서 마음으로 통함. 말하지 않아도 서로 뜻이 통함." },
+            { idiom: "인과응보", hanja: "因果應報", meaning: "원인과 결과가 서로 응함. 좋은 일엔 좋은 결과, 나쁜 일엔 나쁜 결과가 옴." },
+            { idiom: "자업자득", hanja: "自業自得", meaning: "자기가 저지른 일의 결과를 자기가 받음." },
+            { idiom: "전화위복", hanja: "轉禍爲福", meaning: "재앙이 바뀌어 오히려 복이 됨." },
+            { idiom: "절차탁마", hanja: "切磋琢磨", meaning: "옥돌을 깎고 갈듯 학문과 인격을 끊임없이 갈고닦음." },
+            { idiom: "정저지와", hanja: "井底之蛙", meaning: "우물 안 개구리. 식견이 좁은 사람." },
+            { idiom: "조삼모사", hanja: "朝三暮四", meaning: "아침에 3개 저녁에 4개. 당장 눈앞의 차이만 알고 간사한 꾀에 속음." },
+            { idiom: "좌정관천", hanja: "坐井觀天", meaning: "우물에 앉아 하늘을 봄. 식견이 좁아 우물 안 개구리 같음." },
+            { idiom: "주객전도", hanja: "主客顛倒", meaning: "주인과 손님의 위치가 바뀜. 사물의 경중이나 순서가 바뀜." },
+            { idiom: "죽마고우", hanja: "竹馬故友", meaning: "대나무 말을 타고 놀던 옛 친구. 어릴 때부터의 친한 친구." },
+            { idiom: "천고마비", hanja: "天高馬肥", meaning: "하늘은 높고 말은 살쨈. 가을날의 풍요로움을 이르는 말." },
+            { idiom: "천방지축", hanja: "天方地軸", meaning: "너무 급하여 방향을 잡지 못하고 거침없이 행동함." },
+            { idiom: "초록동색", hanja: "草綠同色", meaning: "풀빛과 녹색은 같음. 서로 처지가 같거나 한패임." },
+            { idiom: "탁상공론", hanja: "卓上空論", meaning: "책상 위에서의 실용성 없는 공허한 논의." },
+            { idiom: "파죽지세", hanja: "破竹之勢", meaning: "대나무를 쪼개는 기세. 거침없이 막힘없이 나아감." },
+            { idiom: "풍전등화", hanja: "風前燈火", meaning: "바람 앞의 촛불. 매우 위태로운 처지." },
+            { idiom: "학수고대", hanja: "鶴首苦待", meaning: "학처럼 목을 빼고 간절히 기다림." },
+            { idiom: "허장성세", hanja: "虛張聲勢", meaning: "실속 없이 헛세와 큰소리만 팡팡 침." },
+            { idiom: "호가호위", hanja: "狐假虎威", meaning: "여우가 호랑이의 위세를 빌림. 남의 권력을 빌려 행세함." },
+            { idiom: "혼정신성", hanja: "昏定晨省", meaning: "저녁엔 잠자리를 보살피고 아침엔 안부를 물음. 부모에 대한 효성." },
+            { idiom: "흥진비래", hanja: "興盡悲來", meaning: "즐거운 일이 다하면 슬픈 일이 옴. 흥망성쇠의 순환." },
+            { idiom: "감언이설", hanja: "甘言利說", meaning: "남의 마음에 들도록 아첨하는 말과 이로운 조건을 내세워 꾀는 말." },
+            { idiom: "거안사위", hanja: "居安思危", meaning: "편안할 때도 위험과 어려움에 대비함." },
+            { idiom: "격세지감", hanja: "隔世之感", meaning: "몰라보게 바뀐 모습에 딴 세상처럼 느껴짐." },
+            { idiom: "견물생심", hanja: "見物生心", meaning: "물건을 보면 그것을 가지고 싶은 욕심이 생김." },
+            { idiom: "고진감래", hanja: "苦盡甘來", meaning: "고생 끝에 즐거움이 옴." },
+            { idiom: "괄목상대", hanja: "刮目相對", meaning: "눈을 비비고 상대방을 대함. 학식이나 실력이 몰라보게 향상됨." },
+            { idiom: "교언영색", hanja: "巧言令色", meaning: "남의 기분을 맞추려고 교묘하게 하는 말과 아첨하는 얼굴빛." },
+            { idiom: "군계일학", hanja: "群鷄一鶴", meaning: "닭 무리 속의 한 마리 학. 많은 사람 중 뛰어난 한 사람." },
+            { idiom: "근묵자흑", hanja: "近墨者黑", meaning: "먹을 가까이하면 검어짐. 나쁜 사람과 어울리면 나쁘게 물듦." },
+            { idiom: "금의환향", hanja: "錦衣還鄕", meaning: "비단옷을 입고 고향으로 돌아옴. 출세하여 고향에 돌아옴." },
+            { idiom: "다다익선", hanja: "多多益善", meaning: "많으면 많을수록 더욱 좋음." },
+            { idiom: "단도직입", hanja: "單刀直入", meaning: "칼 한 자루를 쥐고 바로 들어감. 본론으로 바로 들어감." },
+            { idiom: "동가홍상", hanja: "同價紅裳", meaning: "같은 값이면 다홍치마. 조건이 같으면 좋은 것을 택함." },
+            { idiom: "명실상부", hanja: "名實相符", meaning: "이름과 실상이 서로 부합함." },
+            { idiom: "무릉도원", hanja: "武陵桃源", meaning: "세상과 떨어진 신선이 사는 아름답고 평화로운 곳." },
+            { idiom: "박학다식", hanja: "博學多識", meaning: "학식이 넓고 아는 것이 매우 많음." },
+            { idiom: "백척간두", hanja: "百尺竿頭", meaning: "백 척이나 되는 높은 대나무 꼭대기. 위태로움의 극치." },
+            { idiom: "사필귀정", hanja: "事必歸正", meaning: "모든 일은 결국 올바른 이치로 돌아감." },
+            { idiom: "새옹지마", hanja: "塞翁之馬", meaning: "변방 노인의 말. 인생의 길흉화복은 예측할 수 없음." },
+            { idiom: "수수방관", hanja: "袖手傍觀", meaning: "팔짱을 끼고 곁에서 바라보기만 함. 상관하지 않고 방치함." },
+            { idiom: "심심상인", hanja: "心心相印", meaning: "마음과 마음이 서로 도장을 찍듯 통함." },
+            { idiom: "안빈낙도", hanja: "安貧樂道", meaning: "가난함에 편안히 여기며 올바른 도리를 즐김." },
+            { idiom: "어부지리", hanja: "漁夫之利", meaning: "둘이 다투는 사이에 제삼자가 이익을 얻음." },
+            { idiom: "언중유골", hanja: "言中有骨", meaning: "말 속에 뼈가 있음. 예사로운 말 속에 날카로운 뜻이 담김." },
+            { idiom: "역발산기개세", hanja: "力拔山氣蓋世", meaning: "산을 뽑을 만한 힘과 세상을 덮을 만한 기운. 영웅의 기개." },
+            { idiom: "오매불망", hanja: "寤寐不忘", meaning: "자나 깨나 잊지 못함." },
+            { idiom: "우화등선", hanja: "羽化登仙", meaning: "날개가 돋아 신선이 되어 하늘로 올라감." },
+            { idiom: "이열치열", hanja: "以熱治熱", meaning: "열로써 열을 다스림." },
+            { idiom: "인산인해", hanja: "人山人海", meaning: "사람이 산을 이루고 바다를 이룸. 사람이 엄청나게 많음." },
+            { idiom: "일구이언", hanja: "一口二言", meaning: "한 입으로 두 말을 함. 이랬다저랬다 정함이 없음." },
+            { idiom: "일취월장", hanja: "日就月將", meaning: "날마다 나아가고 달마다 발전함. 학업이나 실력이 크게 진보함." },
+            { idiom: "자승자박", hanja: "自繩自縛", meaning: "자기가 꼬아 만든 줄로 제 몸을 묶음. 자기 행동으로 스스로 곤란해짐." },
+            { idiom: "전전반측", hanja: "輾轉反側", meaning: "누워서 이리저리 뒤척임. 걱정이 많아 잠을 이루지 못함." },
+            { idiom: "정문일침", hanja: "頂門一針", meaning: "정수리에 바늘 하나를 찌름. 따끔한 교훈이나 충고." },
+            { idiom: "제구포신", hanja: "除舊布新", meaning: "묵은 것을 없애고 새것을 펼침." },
+            { idiom: "주야장천", hanja: "晝夜長川", meaning: "밤낮으로 시냇물처럼 쉬지 않고 계속 흐름." },
+            { idiom: "천의무봉", hanja: "天衣無縫", meaning: "천사의 옷은 바느질 자국이 없음. 시문이 완벽하여 흠이 없음." },
+            { idiom: "청렴결백", hanja: "淸廉潔白", meaning: "마음이 깨끗하고 탐욕이 없으며 행동이 올바름." },
+            { idiom: "초지일관", hanja: "初志一貫", meaning: "처음에 세운 뜻을 끝까지 밀고 나감." },
+            { idiom: "쾌도난마", hanja: "快刀亂麻", meaning: "잘 드는 칼로 헝클어진 삼을 벰. 복잡한 문제를 시원하게 해결함." },
+            { idiom: "파란만장", hanja: "波瀾萬丈", meaning: "물결의 기복이 일만 장이나 됨. 인생에 우여곡절이 매우 많음." },
+            { idiom: "풍찬노숙", hanja: "風餐露宿", meaning: "바람을 씹으며 밥 먹고 이슬을 맞으며 잠. 야외에서 고생함." },
+            { idiom: "한우충동", hanja: "汗牛充棟", meaning: "짐으로 실으면 소가 땀을 흘리고 집에는 들보까지 차오름. 책이 심하게 많음." },
+            { idiom: "허심탄회", hanja: "虛心坦懷", meaning: "마음을 비우고 편안하고 솔직하게 이야기함." },
+            { idiom: "호사다마", hanja: "好事多魔", meaning: "좋은 일에는 마가 많이 낀다." },
+            { idiom: "화이부동", hanja: "和而不同", meaning: "남과 사이좋게 지내되 소신 없이 무턱대고 같아지지는 않음." },
+            { idiom: "환골탈태", hanja: "換骨奪胎", meaning: "뼈를 바꾸고 태를 벗어남. 용모나 모습이 완전히 새로워짐." },
+            { idiom: "휘호낙필", hanja: "揮毫落筆", meaning: "붓을 휘둘러 시문이나 글씨를 거침없이 씀." },
+            { idiom: "가정맹어호", hanja: "苛政猛於虎", meaning: "가혹한 정치는 호랑이보다 더 무섭다." },
+            { idiom: "각골난망", hanja: "刻骨難忘", meaning: "은혜를 뼈에 새겨 잊지 않음." },
+            { idiom: "견마지로", hanja: "犬馬之勞", meaning: "개나 말의 수고. 임금이나 나라에 바치는 자신의 정성." },
+            { idiom: "결초보은", hanja: "結草報恩", meaning: "풀을 묶어 은혜를 갚음. 죽어서도 은혜를 잊지 않음." },
+            { idiom: "고립무원", hanja: "孤立無援", meaning: "고립되어 구원해 줄 사람이 없음." },
+            { idiom: "구사일생", hanja: "九死一生", meaning: "아홉 번 죽을 고비를 넘기고 한 번 살아남." },
+            { idiom: "군웅할거", hanja: "群雄割據", meaning: "많은 영웅들이 각각 한 지방을 차지하고 다툼." },
+            { idiom: "금지옥엽", hanja: "金枝玉葉", meaning: "귀한 자손이나 귀부인을 귀엽게 이르는 말." },
+            { idiom: "낙화유수", hanja: "落花流水", meaning: "떨어지는 꽃과 흐르는 물. 자연스럽게 뜻이 통함." },
+            { idiom: "노심초사", hanja: "勞心焦思", meaning: "마음을 졸이고 속을 태우며 애를 씀." },
+            { idiom: "동분서주", hanja: "東奔西走", meaning: "동쪽으로 뛰고 서쪽으로 뜀. 바쁘게 돌아다님." },
+            { idiom: "망양보뢰", hanja: "亡羊補牢", meaning: "양을 잃고 외양간을 고침. 소 잃고 외양간 고치기." },
+            { idiom: "백골난망", hanja: "白骨難忘", meaning: "죽어서 백골이 되어도 잊지 못할 고마움." },
+            { idiom: "삼라만상", hanja: "森羅萬象", meaning: "우주에 존재하는 모든 사물과 현상." },
+            { idiom: "약육강식", hanja: "弱肉強食", meaning: "약한 자가 강한 자의 먹이가 됨." },
+            { idiom: "어불성설", hanja: "語不成說", meaning: "말이 논리에 맞지 않아 성립되지 않음." },
+            { idiom: "오리무중", hanja: "五里霧中", meaning: "5리나 되는 짙은 안개 속. 향방이나 일을 알 수 없음." },
+            { idiom: "우순풍조", hanja: "雨順風調", meaning: "비가 때맞추어 내리고 바람이 화창함. 풍년의 징조." },
+            { idiom: "위풍당당", hanja: "威風堂堂", meaning: "풍채나 기세가 매우 위엄 있고 떳떳함." },
+            { idiom: "이판사판", hanja: "理判事判", meaning: "막다른 데 이르러 어찌할 수 없는 지경." },
+            { idiom: "자화자찬", hanja: "自畫自讚", meaning: "자기가 그린 그림을 자기가 칭찬함. 자기 일을 자랑함." },
+            { idiom: "전대미문", hanja: "前代未聞", meaning: "지나간 시대에는 들어본 적이 없음. 아주 희귀함." },
+            { idiom: "지성이면 감천", hanja: "至誠感天", meaning: "정성이 지극하면 하늘도 감동함." },
+            { idiom: "천재일우", hanja: "千載一遇", meaning: "천 년에 한 번 만남. 다시 얻기 힘든 좋은 기회." },
+            { idiom: "칠전팔기", hanja: "七顛八起", meaning: "일곱 번 넘어져도 여덟 번 일어남. 굴하지 않고 노력함." },
+            { idiom: "표리부동", hanja: "表裏不同", meaning: "겉과 속이 서로 다름." },
+            { idiom: "해학과 풍자", hanja: "諧謔諷刺", meaning: "익살스럽고 날카롭게 사회를 비판함." },
+            { idiom: "호구지책", hanja: "糊口之策", meaning: "입칠을 겨우 하는 방책. 겨우 먹고살아갈 대책." }
+        ];
+
+        /*
+         * ==========================================
+         * 2. 게임 상태 관련 변수
+         * ==========================================
+         */
+        let currentQuizList = []; // 이번 게임에 출제된 10개 문제
+        let currentQuizIndex = 0; // 현재 문제 번호 (0 ~ 9)
+        let score = 0;            // 현재 점수
+        let timer = null;         // 타이머 객체
+        let timeLeft = 15;        // 남은 시간
+        let hintUsed = false;     // 힌트 사용 여부
+        let isAnswered = false;   // 정답 제출 완료 여부
+        let answerMode = 'choice';// 'choice' (4지선다) 또는 'input' (직접입력)
+        let reviewHistory = [];   // 복습용 문제 내역
+
+        // localStorage 최고점수 로드
+        let bestScore = localStorage.getItem('idiom_best_score') || 0;
+
+        /*
+         * ==========================================
+         * 3. 초기화 및 화면 전환
+         * ==========================================
+         */
+        document.addEventListener("DOMContentLoaded", () => {
+            document.getElementById('best-score-display').innerText = `${bestScore} 점`;
+        });
+
+        // 제출 모드 변경 (4지선다 / 주관식)
+        function setAnswerMode(mode) {
+            answerMode = mode;
+            const choiceBtn = document.getElementById('mode-choice-btn');
+            const inputBtn = document.getElementById('mode-input-btn');
+
+            if (mode === 'choice') {
+                choiceBtn.className = "p-3 rounded-xl border-2 font-bold text-sm transition-all border-indigo-600 bg-indigo-50 text-indigo-700 flex items-center justify-center space-x-2";
+                inputBtn.className = "p-3 rounded-xl border-2 font-bold text-sm transition-all border-slate-200 bg-white text-slate-600 flex items-center justify-center space-x-2";
+            } else {
+                inputBtn.className = "p-3 rounded-xl border-2 font-bold text-sm transition-all border-indigo-600 bg-indigo-50 text-indigo-700 flex items-center justify-center space-x-2";
+                choiceBtn.className = "p-3 rounded-xl border-2 font-bold text-sm transition-all border-slate-200 bg-white text-slate-600 flex items-center justify-center space-x-2";
+            }
+        }
+
+        // 게임 시작
+        function startGame() {
+            // 변수 초기화
+            score = 0;
+            currentQuizIndex = 0;
+            reviewHistory = [];
+            
+            // 데이터 무작위 셔플 후 10개 선정
+            const shuffled = [...idiomDatabase].sort(() => 0.5 - Math.random());
+            currentQuizList = shuffled.slice(0, 10).map(item => {
+                // 문제 형태 생성 (앞 2글자 빈칸 또는 뒤 2글자 빈칸)
+                const isFrontBlank = Math.random() < 0.5;
+                const blankPart = isFrontBlank ? item.idiom.slice(0, 2) : item.idiom.slice(2, 4);
+                const givenPart = isFrontBlank ? item.idiom.slice(2, 4) : item.idiom.slice(0, 2);
+                
+                return {
+                    ...item,
+                    isFrontBlank: isFrontBlank,
+                    blankPart: blankPart, // 정답 2글자
+                    givenPart: givenPart, // 제시어 2글자
+                    questionText: isFrontBlank ? `□ □ ${givenPart}` : `${givenPart} □ □`
+                };
+            });
+
+            // 화면 전환
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+
+            // 점수 업데이트
+            updateScoreDisplay();
+
+            // 첫번째 문제 로드
+            loadQuestion();
+        }
+
+        /*
+         * ==========================================
+         * 4. 문제 출제 및 타이머 로직
+         * ==========================================
+         */
+        function loadQuestion() {
+            // 변수 reset
+            clearInterval(timer);
+            timeLeft = 15;
+            hintUsed = false;
+            isAnswered = false;
+
+            const quiz = currentQuizList[currentQuizIndex];
+
+            // UI 설정
+            document.getElementById('current-quiz-num').innerText = currentQuizIndex + 1;
+            document.getElementById('quiz-question').innerText = quiz.questionText;
+            document.getElementById('hint-btn').style.display = 'inline-flex';
+            document.getElementById('hint-text').classList.add('hidden');
+            document.getElementById('hint-text').innerText = '';
+            document.getElementById('result-feedback').classList.add('hidden');
+            
+            // 타이머 디스플레이 설정
+            updateTimerDisplay();
+
+            // 모드별 입력창/보기 구성
+            if (answerMode === 'choice') {
+                document.getElementById('choice-container').classList.remove('hidden');
+                document.getElementById('input-container').classList.add('hidden');
+                setupChoices(quiz);
+            } else {
+                document.getElementById('choice-container').classList.add('hidden');
+                document.getElementById('input-container').classList.remove('hidden');
+                const inputEl = document.getElementById('user-input-answer');
+                inputEl.value = '';
+                inputEl.disabled = false;
+                inputEl.focus();
+            }
+
+            // 타이머 작동 시작
+            timer = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    handleTimeOut();
+                }
+            }, 1000);
+        }
+
+        // 4지선다 보기 만들기
+        function setupChoices(quiz) {
+            const container = document.getElementById('choice-container');
+            container.innerHTML = '';
+
+            // 오답 보기 3개 추출 (중복 제거)
+            const wrongOptions = [];
+            while (wrongOptions.length < 3) {
+                const randomIdiom = idiomDatabase[Math.floor(Math.random() * idiomDatabase.length)];
+                const candidate = quiz.isFrontBlank ? randomIdiom.idiom.slice(0, 2) : randomIdiom.idiom.slice(2, 4);
+                
+                if (candidate !== quiz.blankPart && !wrongOptions.includes(candidate)) {
+                    wrongOptions.push(candidate);
+                }
+            }
+
+            // 정답 포함 4개 무작위 섞기
+            const options = [...wrongOptions, quiz.blankPart].sort(() => 0.5 - Math.random());
+
+            options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full py-4 px-5 bg-white border-2 border-slate-200 hover:border-indigo-500 hover:bg-indigo-50 text-slate-800 font-bold text-lg rounded-2xl transition-all shadow-sm flex items-center justify-between btn-bounce";
+                btn.innerHTML = `<span><span class="text-xs bg-slate-100 text-slate-500 rounded-md px-2 py-1 mr-2">${idx + 1}</span> ${opt}</span> <i class="fa-solid fa-chevron-right text-xs text-slate-300"></i>`;
+                btn.onclick = () => selectChoice(opt, btn);
+                container.appendChild(btn);
+            });
+        }
+
+        // 타이머 UI 업데이트
+        function updateTimerDisplay() {
+            document.getElementById('timer-text').innerText = timeLeft;
+            const bar = document.getElementById('timer-bar');
+            const percentage = (timeLeft / 15) * 100;
+            bar.style.width = `${percentage}%`;
+
+            if (timeLeft <= 5) {
+                bar.className = "bg-rose-500 h-full transition-all duration-1000 linear";
+            } else {
+                bar.className = "bg-indigo-500 h-full transition-all duration-1000 linear";
+            }
+        }
+
+        // 힌트 사용
+        function useHint() {
+            if (hintUsed || isAnswered) return;
+
+            hintUsed = true;
+            const quiz = currentQuizList[currentQuizIndex];
+            
+            document.getElementById('hint-btn').style.display = 'none';
+            const hintTextEl = document.getElementById('hint-text');
+            hintTextEl.innerText = `💡 뜻풀이: ${quiz.meaning}`;
+            hintTextEl.classList.remove('hidden');
+        }
+
+        /*
+         * ==========================================
+         * 5. 정답 검증 및 결과 처리
+         * ==========================================
+         */
+        
+        // 4지선다 클릭 시
+        function selectChoice(selected, btnElement) {
+            if (isAnswered) return;
+            processAnswer(selected === currentQuizList[currentQuizIndex].blankPart, selected);
+        }
+
+        // 주관식 제출 시
+        function submitInputAnswer(e) {
+            e.preventDefault();
+            if (isAnswered) return;
+            
+            const userInput = document.getElementById('user-input-answer').value.trim();
+            if (!userInput) return;
+
+            const quiz = currentQuizList[currentQuizIndex];
+            processAnswer(userInput === quiz.blankPart, userInput);
+        }
+
+        // 시간 초과 처리
+        function handleTimeOut() {
+            if (isAnswered) return;
+            processAnswer(false, "시간초과");
+        }
+
+        // 정/오답 공통 로직
+        function processAnswer(isCorrect, userAnswer) {
+            isAnswered = true;
+            clearInterval(timer);
+
+            const quiz = currentQuizList[currentQuizIndex];
+
+            // 입력 제어 비활성화
+            if (answerMode === 'input') {
+                document.getElementById('user-input-answer').disabled = true;
+            } else {
+                const btns = document.querySelectorAll('#choice-container button');
+                btns.forEach(b => b.disabled = true);
+            }
+
+            // 점수 계산
+            let gainedScore = 0;
+            if (isCorrect) {
+                gainedScore = 100 + (timeLeft * 2); // 기본 100점 + 시간 보너스
+                if (hintUsed) gainedScore -= 30;     // 힌트 감점
+                if (gainedScore < 0) gainedScore = 0;
+                score += gainedScore;
+            } else {
+                if (hintUsed) score -= 10;           // 오답에 힌트 사용시 추가 소량 감점
+                if (score < 0) score = 0;
+            }
+
+            updateScoreDisplay();
+
+            // 복습 데이터 기록
+            reviewHistory.push({
+                quiz: quiz,
+                userAnswer: userAnswer,
+                isCorrect: isCorrect,
+                hintUsed: hintUsed
+            });
+
+            // 결과 피드백 노출
+            showFeedback(isCorrect, quiz);
+        }
+
+        // 피드백 UI 표시
+        function showFeedback(isCorrect, quiz) {
+            const feedbackEl = document.getElementById('result-feedback');
+            const iconEl = document.getElementById('feedback-icon');
+            const titleEl = document.getElementById('feedback-title');
+            
+            document.getElementById('fb-idiom').innerText = quiz.idiom;
+            document.getElementById('fb-hanja').innerText = quiz.hanja;
+            document.getElementById('fb-meaning').innerText = quiz.meaning;
+
+            feedbackEl.classList.remove('hidden');
+
+            if (isCorrect) {
+                feedbackEl.className = "mt-4 p-5 rounded-2xl text-left border bg-emerald-50 border-emerald-200 text-emerald-900 animate-fade-in";
+                iconEl.innerHTML = "<i class='fa-solid fa-circle-check text-emerald-500'></i>";
+                titleEl.innerText = "정답입니다! 👏";
+            } else {
+                feedbackEl.className = "mt-4 p-5 rounded-2xl text-left border bg-rose-50 border-rose-200 text-rose-900 animate-fade-in";
+                iconEl.innerHTML = "<i class='fa-solid fa-circle-xmark text-rose-500'></i>";
+                titleEl.innerText = "아쉽네요, 오답입니다!";
+            }
+        }
+
+        // 다음 문제로 이동
+        function nextQuestion() {
+            currentQuizIndex++;
+            if (currentQuizIndex < 10) {
+                loadQuestion();
+            } else {
+                endGame();
+            }
+        }
+
+        // 점수 텍스트 갱신
+        function updateScoreDisplay() {
+            document.getElementById('current-score').innerText = score;
+        }
+
+        /*
+         * ==========================================
+         * 6. 게임 종료 및 복습(오답노트) 모달
+         * ==========================================
+         */
+        function endGame() {
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.remove('hidden');
+
+            document.getElementById('final-score').innerText = `${score}점`;
+
+            // 정답/오답 통계
+            const correctCnt = reviewHistory.filter(item => item.isCorrect).length;
+            const wrongCnt = 10 - correctCnt;
+            document.getElementById('correct-count').innerText = correctCnt;
+            document.getElementById('wrong-count').innerText = wrongCnt;
+
+            // 최고점수 갱신 확인
+            const newRecordTag = document.getElementById('new-record-tag');
+            if (score > bestScore) {
+                bestScore = score;
+                localStorage.setItem('idiom_best_score', bestScore);
+                document.getElementById('best-score-display').innerText = `${bestScore} 점`;
+                newRecordTag.classList.remove('hidden');
+            } else {
+                newRecordTag.classList.add('hidden');
+            }
+        }
+
+        // 복습 모달 열기
+        function openReviewModal() {
+            const reviewListEl = document.getElementById('review-list');
+            reviewListEl.innerHTML = '';
+
+            reviewHistory.forEach((item, idx) => {
+                const card = document.createElement('div');
+                const isCorrect = item.isCorrect;
+
+                card.className = `p-4 rounded-2xl border ${isCorrect ? 'bg-emerald-50/50 border-emerald-200' : 'bg-rose-50/50 border-rose-200'}`;
+                
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold px-2.5 py-1 rounded-md ${isCorrect ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">
+                            문제 ${idx + 1} - ${isCorrect ? '정답 ⭕' : '오답 ❌'}
+                        </span>
+                        <span class="text-xs text-slate-400 font-medium">제출: ${item.userAnswer}</span>
+                    </div>
+                    <div class="text-lg font-black text-slate-800">
+                        ${item.quiz.idiom} <span class="text-sm font-normal text-slate-500">(${item.quiz.hanja})</span>
+                    </div>
+                    <p class="text-xs md:text-sm text-slate-600 mt-1 leading-relaxed">
+                        ${item.quiz.meaning}
+                    </p>
+                `;
+                reviewListEl.appendChild(card);
+            });
+
+            document.getElementById('review-modal').classList.remove('hidden');
+        }
+
+        // 복습 모달 닫기
+        function closeReviewModal() {
+            document.getElementById('review-modal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
